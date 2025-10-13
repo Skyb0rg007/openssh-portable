@@ -4902,6 +4902,44 @@ AC_ARG_WITH([selinux],
 )
 AC_SUBST([SSHDLIBS])
 
+# Check whether user wants lastlog2 support
+LASTLOG2_MSG="no"
+AC_ARG_WITH([lastlog2],
+	[ --with-lastlog2[[=PATH]]   Enable lastlog2 support],
+	[ if test "x$withval" != "xno" ; then
+		use_pkgconfig_for_lastlog2=
+	 	if test "x$withval" = "xyes" ; then
+			if test "x$PKGCONFIG" != "xno"; then
+				AC_MSG_CHECKING([if $PKGCONFIG knows about lastlog2])
+				if "$PKGCONFIG" lastlog2; then
+					AC_MSG_RESULT([yes])
+					use_pkgconfig_for_lastlog2=yes
+				else
+					AC_MSG_RESULT([no])
+				fi
+			fi
+		else
+			CPPFLAGS="$CPPFLAGS -I${withval}/include"
+			if test -n "${rpath_opt}" ; then
+				LDFLAGS="-L${withval}/lib ${rpath_opt}${withval}/lib ${LDFLAGS}"
+			else
+				LDFLAGS="-L${withval}/lib ${LDFLAGS}"
+			fi
+		fi
+		if test "x$use_pkgconfig_for_lastlog2" = "xyes"; then
+			CPPFLAGS="$CPPFLAGS `$PKGCONFIG --cflags lastlog2`"
+			LDFLAGS="`$PKGCONFIG --libs lastlog2` $LDFLAGS"
+		else
+			CPPFLAGS="$CPPFLAGS -I${withval}/include"
+			LDFLAGS="-L${withval}/lib $LDFLAGS"
+		fi
+
+		AC_DEFINE([WITH_LASTLOG2], [1],
+			[Define if you want lastlog2 support.])
+		LASTLOG2_MSG="yes"
+
+	fi ])
+
 # Check whether user wants Kerberos 5 support
 KRB5_MSG="no"
 AC_ARG_WITH([kerberos5],
@@ -5883,6 +5921,7 @@ echo "                       PAM support: $PAM_MSG"
 echo "                   OSF SIA support: $SIA_MSG"
 echo "                 KerberosV support: $KRB5_MSG"
 echo "                   SELinux support: $SELINUX_MSG"
+echo "                  lastlog2 support: $LASTLOG2_MSG"
 echo "                   libedit support: $LIBEDIT_MSG"
 echo "                   libldns support: $LDNS_MSG"
 echo "  Solaris process contract support: $SPC_MSG"

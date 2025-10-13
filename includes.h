@@ -157,6 +157,10 @@
 # include <sys/syslog.h>
 #endif
 
+#if defined(WITH_LASTLOG2)
+# include <lastlog2.h>
+#endif
+
 #include <errno.h>
 
 /*

@@ -9,6 +9,7 @@ sbindir=@sbindir@
 libexecdir=@libexecdir@
 datadir=@datadir@
 datarootdir=@datarootdir@
+localstatedir=@localstatedir@
 mandir=@mandir@
 mansubdir=@mansubdir@
 sysconfdir=@sysconfdir@
@@ -45,7 +46,8 @@ PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 	-D_PATH_SSH_PKCS11_HELPER=\"$(SSH_PKCS11_HELPER)\" \
 	-D_PATH_SSH_SK_HELPER=\"$(SSH_SK_HELPER)\" \
 	-D_PATH_SSH_PIDDIR=\"$(piddir)\" \
-	-D_PATH_PRIVSEP_CHROOT_DIR=\"$(PRIVSEP_PATH)\"
+	-D_PATH_PRIVSEP_CHROOT_DIR=\"$(PRIVSEP_PATH)\" \
+	-D_PATH_LOCALSTATEDIR=\"$(localstatedir)\"
 
 CC=@CC@
 LD=@LD@

@@ -431,7 +431,7 @@ login_write(struct logininfo *li)
 #ifdef USE_LOGIN
 	syslogin_write_entry(li);
 #endif
-#ifdef USE_LASTLOG
+#if defined(USE_LASTLOG) || defined(USE_LASTLOG2)
 	if (li->type == LTYPE_LOGIN)
 		lastlog_write_entry(li);
 #endif
@@ -496,9 +496,9 @@ login_utmp_only(struct logininfo *li)
 int
 getlast_entry(struct logininfo *li)
 {
-#ifdef USE_LASTLOG
+#if defined(USE_LASTLOG) || defined(USE_LASTLOG2)
 	return(lastlog_get_entry(li));
-#else /* !USE_LASTLOG */
+#else /* !(USE_LASTLOG || USE_LASTLOG2) */
 #if defined(USE_UTMPX) && defined(HAVE_SETUTXDB) && \
     defined(UTXDB_LASTLOGIN) && defined(HAVE_GETUTXUSER)
 	return (utmpx_get_entry(li));
@@ -1667,6 +1667,90 @@ lastlog_get_entry(struct logininfo *li)
 }
 #endif /* HAVE_GETLASTLOGXBYNAME */
 #endif /* USE_LASTLOG */
+
+#ifdef USE_LASTLOG2
+int
+lastlog_get_entry(struct logininfo *li)
+{
+    struct ll2_context *ctx;
+    char *rhost, *tty, *pam_service, *err = NULL;
+    time_t ll_time;
+    int ret;
+
+    ctx = ll2_new_context(LL2_DEFAULT_DATABASE);
+    if (ctx == NULL) {
+		error("%s: Error opening lastlog2 database %s", __func__,
+		    LL2_DEFAULT_DATABASE);
+        return (0);
+    }
+
+    ret = ll2_read_entry(ctx,
+            li->username,
+            &ll_time,
+            &tty,
+            &rhost,
+            &pam_service,
+            &err);
+    if (ret < 0) {
+		error("%s: Error reading from lastlog2 database %s: %s", __func__,
+		    LL2_DEFAULT_DATABASE, err ? err : strerror(-ret));
+        free(err);
+        ll2_unref_context(ctx);
+        return (0);
+    }
+
+#if UINT_MAX == UINT32_MAX
+    if ((time_t)UINT32_MAX < ll_time) {
+		logit("%s: lastlog2 login time exceeds storage type", __func__);
+    }
+#endif
+
+	strlcpy(li->hostname, rhost, sizeof(li->hostname));
+	strlcpy(li->progname, pam_service, sizeof(li->progname));
+	line_fullname(li->line, tty, sizeof(li->line));
+    li->tv_sec = ll_time;
+    li->tv_usec = 0;
+
+    free(pam_service);
+    free(rhost);
+    free(tty);
+    ll2_unref_context(ctx);
+    return (1);
+}
+
+int
+lastlog_write_entry(struct logininfo *li)
+{
+    struct ll2_context *ctx;
+    char *err = NULL;
+    int ret;
+
+    ctx = ll2_new_context(LL2_DEFAULT_DATABASE);
+    if (ctx == NULL) {
+		error("%s: Error opening lastlog2 database %s", __func__,
+		    LL2_DEFAULT_DATABASE);
+        return (0);
+    }
+
+    ret = ll2_write_entry(ctx,
+            li->username,
+            li->tv_sec,
+            li->line,
+            li->hostname,
+            li->progname,
+            &err);
+    if (ret < 0) {
+		error("%s: Error reading from lastlog2 database %s: %s", __func__,
+		    LL2_DEFAULT_DATABASE, err ? err : strerror(-ret));
+        free(err);
+        ll2_unref_context(ctx);
+        return (0);
+    }
+
+    ll2_unref_context(ctx);
+    return (1);
+}
+#endif /* USE_LASTLOG2 */
 
 #if defined(USE_UTMPX) && defined(HAVE_SETUTXDB) && \
     defined(UTXDB_LASTLOGIN) && defined(HAVE_GETUTXUSER)
